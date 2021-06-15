@@ -1,0 +1,69 @@
+# API endpoint deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: address-book-manage-api-deploy
+  labels:
+    app: address-book-manage-api
+    ver: 0.1.1
+    environment: production
+    release: address-book-stable
+    # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: address-book-manage-api
+      ver: 0.1.1
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: address-book-manage-api
+        ver: 0.1.1
+        environment: production
+    #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+    spec:
+      containers:
+      - name: manage-api-container
+        image: adamfowleruk/address-book-manage-api:v0.1.1
+        env:
+        - name: DATABASE_HOST
+          value: addressbookdb.cn.adamfowler.org
+        # - name: DATABASE_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: address-book-db-password
+        #       key: address-book-db-password
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3000
+---
+# DB deployment
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: address-book-db
+#  labels:
+#    app: address-book
+#    appver: 0.1.1
+#    environment: production
+#    release: address-book-stable
+#    release number: 12345678
+#spec:
+#  selector:
+#    matchLabels:
+#      app: address-book-db
+#      tier: data
+#  strategy: 
+#    type: Recreate
+#  template:
+    
