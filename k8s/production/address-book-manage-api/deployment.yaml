@@ -1,3 +1,25 @@
+# API service for discovery and port linking
+apiVersion: v1
+kind: Service
+metadata:
+  name: address-book-manage-api-svc
+  labels:
+    app: address-book-manage-api
+    service: address-book-manage-api-svc
+spec:
+  ports:
+  - port: 3000
+    name: http
+  selector:
+    app: address-book-manage-api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: address-book-manage-api
+  labels:
+    account: addressbookmanagement
+---
 # API endpoint deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -44,7 +66,7 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
-        ports:
+        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
         - containerPort: 3000
 ---
 # DB deployment

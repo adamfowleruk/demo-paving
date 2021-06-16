@@ -1,19 +1,74 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
 metadata:
-  name: address-book-manage-api-ingress
+  name: address-book-gateway
 spec:
-  rules:
-  - host: localhost
-    http:
-      paths:
-      - path: /v1/manage
-        pathType: Prefix
-        backend:
-          service:
-            name: address-book-manage-api
-            port:
-              number: 3000
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+# Rewriteany incoming requests foraddressbook.adamfowler.org and apply accept URL restrictions
+# Keep same destination host (actually means 'dont rewriteclient hostname requested')
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: address-book-route
+spec:
+  hosts: # Map to all hosts mapped to this load balancer
+  - "*"
+  gateways:
+  - address-book-gateway
+  http:
+  # option 1: Entire hostname + subdomain
+  # - route:
+  #   - destination:
+  #       host: address-book-manage-api-svc
+  # Option 2: By URL components as well as hostname andsubdomain(better as allows /v1 and /v2 urls)
+  - match:
+    - uri: # Note NO trailing slash here
+        prefix: /api/v1/manage
+    rewrite: # Container itself only knows about / URL - no versioned endpoints. That comes from istio routes
+      uri: /
+    route:
+    - destination: # Destination is a Kubernetes Service name and NOT a physical hostname
+        host: address-book-manage-api-svc
+---
+# Now the destination rule which maps the subsets onto the specific container versions
+#apiVersion: networking.istio.io/v1alpha3
+#kind: DestinationRule
+#metadata:
+#  name: address-book-destination
+#  namespace: default
+#spec:
+#  host: address-book-manage-api-svc
+#  subsets:
+#  - name: v1
+#    labels:
+#      ver: 0.1.1
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata:
+#  name: address-book-manage-api-ingress
+#spec:
+#  rules:
+#  - host: localhost
+#    http:
+#      paths:
+#      - path: /v1/manage
+#        pathType: Prefix
+#        backend:
+#          service:
+#            name: address-book-manage-api
+#            port:
+#              number: 3000
+##
 # apiVersion: networking.istio.io/v1alpha3
 # kind: VirtualService
 # metadata:
