@@ -38,20 +38,21 @@ spec:
     route:
     - destination: # Destination is a Kubernetes Service name and NOT a physical hostname
         host: address-book-manage-api-svc
+        subset: v1
 ---
 # Now the destination rule which maps the subsets onto the specific container versions
-#apiVersion: networking.istio.io/v1alpha3
-#kind: DestinationRule
-#metadata:
-#  name: address-book-destination
-#  namespace: default
-#spec:
-#  host: address-book-manage-api-svc
-#  subsets:
-#  - name: v1
-#    labels:
-#      ver: 0.1.1
-#---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: address-book-destination
+  namespace: default
+spec:
+  host: address-book-manage-api-svc
+  subsets:
+  - name: v1
+    labels:
+      ver: 0.1.1
+---
 #apiVersion: networking.k8s.io/v1
 #kind: Ingress
 #metadata:
