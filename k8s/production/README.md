@@ -8,13 +8,13 @@ Note: We'll start with prod, and then parameterise it for multiple environments.
 
 ## Working
 
-- Manage api service description
-- Manage API nodeport exposure on localhost:30001
+- DONE Manage api service description
+- DONE Manage API nodeport exposure on localhost:30001
 
 ## TODOs
 
 Phase 1: Basic HATEOAS RESTful API sample
-- Istio exposure on GET /v1/manage with basic load balancer as per book
+- DONE Istio exposure on GET /v1/manage with basic load balancer as per book
 - Add HATEOAS and create 'addresses' and 'address/name' endpoints
 - Ensure istio exposes these endpoints correctly, and that /v1 is added / rewritten to HATEOAS links
 - Ensure /v1 and /v2 specifiers are working with specific named container versions
