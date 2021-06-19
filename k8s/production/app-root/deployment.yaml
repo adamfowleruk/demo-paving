@@ -27,7 +27,7 @@ metadata:
   name: root-api-deploy
   labels:
     app: root-api
-    ver: 0.1.3
+    ver: 0.1.4
     environment: production
     release: address-book-stable
     # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
@@ -40,20 +40,20 @@ spec:
   selector:
     matchLabels:
       app: root-api
-      ver: 0.1.3
+      ver: 0.1.4
     matchExpressions:
       - {key: environment, operator: In, values: [production]}
   template:
     metadata:
       labels:
         app: root-api
-        ver: 0.1.3
+        ver: 0.1.4
         environment: production
     #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
     spec:
       containers:
       - name: root-api-container
-        image: adamfowleruk/address-book-root-api:v0.1.3
+        image: adamfowleruk/address-book-root-api:v0.1.4
         env:
         - name: PORT
           value: "3005"

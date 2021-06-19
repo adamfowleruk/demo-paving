@@ -22,6 +22,8 @@ Phase 1: Basic HATEOAS RESTful API sample
 Phase 1a: Baseline pen test
 - Deploy port scan container instance and see what we can see on the local network
 - See what headers come back and if we need to remove any by default
+ - server, x-envoy-upstream-service-time, x-powered-by
+ - etag? (not modified seems to be working well with this)
 
 Phase 1b: Multiple ingress gateways / user types
 - Authenticated vs unauthenticated users
