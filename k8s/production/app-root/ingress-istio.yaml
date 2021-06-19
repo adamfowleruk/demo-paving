@@ -3,7 +3,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: address-book-route
+  name: root-api-route
 spec:
   hosts: # Map to all hosts mapped to this load balancer
   - "*"
@@ -17,28 +17,29 @@ spec:
   # Option 2: By URL components as well as hostname andsubdomain(better as allows /v1 and /v2 urls)
   - match:
     - uri:
-        exact: /api/v1/manage
+        exact: /api/v1
     - uri:
-        prefix: /api/v1/manage/
+        exact: /api/v1/
     rewrite: # Container itself only knows about / URL - no versioned endpoints. That comes from istio routes
       uri: /
     route:
     - destination: # Destination is a Kubernetes Service name and NOT a physical hostname
-        host: address-book-manage-api-svc
+        host: root-api-svc
         subset: v1
       headers: # Setting replacement headers rather than rewriting response content (safer, left to the application)
         request:
           set:
-            "X-HttpServiceURL": "/api/v1/manage/"
+            "X-HttpServiceURL": "/api/v1/"
+            "X-HttpReplaceURLPrefixes": "/addresses=/api/v1/manage/"
 ---
 # Now the destination rule which maps the subsets onto the specific container versions
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: address-book-destination
+  name: root-api-destination
   namespace: default
 spec:
-  host: address-book-manage-api-svc
+  host: root-api-svc
   subsets:
   - name: v1
     labels:
