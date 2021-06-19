@@ -30,6 +30,11 @@ spec:
         request:
           set:
             "X-HttpServiceURL": "/api/v1/manage/"
+        response:
+          remove:
+            - "server"
+            - "x-powered-by"
+            - "x-envoy-upstream-service-time"
 ---
 # Now the destination rule which maps the subsets onto the specific container versions
 apiVersion: networking.istio.io/v1alpha3
