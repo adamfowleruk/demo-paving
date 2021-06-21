@@ -1,0 +1,17 @@
+# Only allow specific pods to access the app's DB
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: address-app-to-its-db-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: address-book-db
+  ingress:
+  - from:
+    - podSelector:
+      matchLabels:
+        k8s-app: address-book-manage-api
+  policyTypes:
+  - Ingress
+---

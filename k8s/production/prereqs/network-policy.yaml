@@ -1,0 +1,33 @@
+# Prevent all pods from accessing the kubernetes dashboard URL via cURL
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: block-dashboard-policy
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  policyTypes:
+  - Ingress
+---
+# Default deny all except kube-dns 
+# (Note: Ensure you enable specific policy for workloads!)
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: default
+spec:
+  podSelector: {}
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+  - ports:
+    - protocol: UDP
+      port: 53
+  policyTypes:
+  - Ingress
+  - Egress
