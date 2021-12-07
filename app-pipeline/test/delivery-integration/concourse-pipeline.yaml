@@ -1,0 +1,44 @@
+resources:
+# The repo with our Dockerfileflask
+- name: python-flask
+  type: git
+  icon: python
+  source:
+    uri: https://github.com/adamfowleruk/demo-flask-app
+    branch: main
+
+# Where we will push the image
+- name: build-python-flask-image
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: ci-test-debianbullseye
+
+jobs:
+- name: build-and-push-flask
+  plan:
+  - get: python-flask
+  - task: build-python-flask-image
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask
+        DOCKERFILE: python-flask/Dockerfiles/flask/Dockerfile
+        BUILD_ARG_BASE_IMAGE: python:3.10.0-bullseye
+      run:
+        path: build
+  - put: build-python-flask-image
+    params:
+      image: image/image.tar
