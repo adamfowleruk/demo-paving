@@ -69,7 +69,8 @@ helm install my-concourse concourse/concourse \
   --set 'concourse.web.kubernetes.namespacePrefix=ci-release-' \
   --set 'concourse.web.auth.mainTeam.localUser=ciuser' \
   --set 'secrets.localUsers=MYUSERNAME:SOMESUPERSECUREPASSWORD' \
-  --set 'persistence.worker.size=256Gi'
+  --set 'persistence.worker.size=256Gi' \
+  --set 'worker.runtime=containerd'
 ```
 
 Then I manually applied my istio config for concourse:-
@@ -87,6 +88,11 @@ Note I didn't use the below as I keep my istio config separate, but you could:-
 ```sh
   --set 'concourse.ingress.enabled=true' \
   --set 'concourse.ingress.hosts=concourse.shared.12factor.xyz' \
+```
+
+Note that the following does not work (uses StatefulSets by default instead):-
+```sh
+  --set 'worker.kind=Deployment' \
 ```
 
 

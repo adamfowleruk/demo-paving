@@ -1,0 +1,20 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: time-api-web
+  namespace: default
+spec:
+  hosts:
+    - "time.shared.12factor.xyz"
+  gateways:
+  - issuer-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 5000
+        host: time-api-svc.time.svc.cluster.local
