@@ -1,0 +1,156 @@
+
+resources:
+# The repo with out app
+- name: adsb-app
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/spring-adsb
+    branch: feature-23
+    #branch: develop
+
+# The repo with our base image definitions
+- name: base-images
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/demo-base-images
+    branch: main
+
+# The Container registry with our utility images
+# - Built by the deliver-integration/pipeline.yaml pipeline
+# Builder name: java-spring-builder-base-image:v1-debian-bullseye
+# Runner name: java-spring-runner-base-image:v1-debian-bullseye
+
+# The images we are generating in this pipeline
+- name: adsb-live-processor-java
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/adsb-live-processor-java
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+- name: adsb-history-processor-java
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/adsb-history-processor-java
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+- name: aircraft-monitor-java
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/aircraft-monitor-java
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+jobs:
+# Now build the thin image for the test app
+# - using the java builder and runner base images
+- name: build-live-processor-java-image
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+  - get: base-images
+    trigger: true
+  - task: build-live-processor-java-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: adsb-app
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        BUILD_ARG_APP_FOLDER: adsb-app/adsb-live-processor-java
+        BUILD_ARG_APP_JAR_FILENAME: target/adsb-live-processor-0.0.1-SNAPSHOT.jar
+      run:
+        path: build
+  - put: adsb-live-processor-java
+    params:
+      image: image/image.tar
+
+- name: build-history-processor-java-image
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+  - get: base-images
+    trigger: true
+  - task: build-history-processor-java-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: adsb-app
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        BUILD_ARG_APP_FOLDER: adsb-app/adsb-history-processor-java
+        BUILD_ARG_APP_JAR_FILENAME: target/adsb-history-processor-0.0.1-SNAPSHOT.jar
+      run:
+        path: build
+  - put: adsb-history-processor-java
+    params:
+      image: image/image.tar
+
+
+- name: build-aircraft-monitor-java-image
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+  - get: base-images
+    trigger: true
+  - task: build-aircraft-monitor-java-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: adsb-app
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        BUILD_ARG_APP_FOLDER: adsb-app/aircraft-monitor-java
+        BUILD_ARG_APP_JAR_FILENAME: target/aircraft-monitor-0.0.1-SNAPSHOT.jar
+      run:
+        path: build
+  - put: aircraft-monitor-java
+    params:
+      image: image/image.tar
+
+# BUILD_ARG_BUILDER_BASE_IMAGE: ((image-repo-name))/java-spring-builder-base-image:v1-debian-bullseye
+# BUILD_ARG_RUNNER_BASE_IMAGE: ((image-repo-name))/java-spring-runner-base-image:v1-debian-bullseye
+        # BUILD_ARG_RUN_SPRING_PROFILE: k8s
+        # BUILD_ARG_RUN_PORT: 5000

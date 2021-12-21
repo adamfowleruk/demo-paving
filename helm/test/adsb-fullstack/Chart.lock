@@ -1,0 +1,9 @@
+dependencies:
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 15.6.7
+- name: rabbitmq-cluster-operator
+  repository: https://charts.bitnami.com/bitnami
+  version: 2.0.9
+digest: sha256:23457c8731bbb1efc913a23a1d779b8d4dbde2ba001a0342159cd1e3908b6416
+generated: "2021-12-21T13:07:04.637099Z"

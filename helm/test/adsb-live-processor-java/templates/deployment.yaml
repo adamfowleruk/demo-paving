@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "adsb-live-processor-java.fullname" . }}
+  labels:
+    {{- include "adsb-live-processor-java.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "adsb-live-processor-java.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "adsb-live-processor-java.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "adsb-live-processor-java.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+          - name: PORT
+            value: "4000"
+          - name: SPRING_PROFILE
+            value: "k8s"
+          - name: RABBITMQ_URL
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+                key: rabbitmq-url
+          # - name: RABBITMQ_PORT
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+          #       key: rabbitmq-port
+          # - name: RABBITMQ_USERNAME
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+          #       key: rabbitmq-username
+          # - name: RABBITMQ_PASSWORD
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+          #       key: rabbitmq-password
+
+          # Spring uses a temp dir. Read only FS causes spring (tomcat) to fail
+          # See https://github.com/spring-projects/spring-boot/issues/8578
+          # Workaround is empty dir, as per the below (ephemeral temp store)
+          # WARNING ALL CONTAINERS ON THE SAME NODE CAN READ/WRITE THIS FOLDER!
+          # Also note that a pod failure doesn't clear the folder, only a reboot
+          volumeMounts:
+          - name: tomcat-temp-volume
+            mountPath: /tmp
+      volumes:
+      - name: tomcat-temp-volume
+        emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

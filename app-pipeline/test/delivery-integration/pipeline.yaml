@@ -66,6 +66,7 @@ resources:
     branch: main
 
 # Debian Bullseye based images
+## Python Flask
 - name: python-flask-base-image-debian-bullseye
   type: registry-image
   icon: docker
@@ -84,6 +85,7 @@ resources:
     password: ((registry-password))
     tag: v1-debian-bullseye
 
+## ReactJS
 - name: reactjs-base-image-debian-bullseye
   type: registry-image
   icon: docker
@@ -98,6 +100,25 @@ resources:
   icon: docker
   source:
     repository: ((image-repo-name))/reactjs-time-ui-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+## Java Spring
+- name: java-spring-builder-base-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-spring-builder-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: java-spring-runner-base-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-spring-runner-base-image
     username: ((registry-username))
     password: ((registry-password))
     tag: v1-debian-bullseye
@@ -526,3 +547,9 @@ jobs:
 #   - put: reactjs-time-ui-image-debian-bullseye
 #     params:
 #       image: image/image.tar
+
+
+
+
+
+# Java Spring builder and runtime images

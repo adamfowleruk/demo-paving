@@ -1,0 +1,31 @@
+# Default values for adsb-fullstack.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Now the configuration for the child helm charts
+# First: Data services
+# - None - using defaults
+# Second: Application helm charts
+# - Note, they inherit Namespace and Release Name from this chart automatically
+# adsb-live-processor-java:
+#   serviceBindings:
+#     redis:
+#       secretName: {{ .Release.Name }}-redis
+#       passwordKey: redis-password
+#       host: {{ .Release.Name }}-redis-headless
+#       port: 6379
+#     rabbitmq:
+#       secretName: {{ .Release.Name }}-rabbitmq-default-user
+#       passwordKey: password
+#       usernameKey: username
+#       host: {{ .Release.Name }}-rabbitmq
+#       port: 5672
