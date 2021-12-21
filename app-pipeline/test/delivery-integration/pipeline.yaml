@@ -1,0 +1,528 @@
+
+groups:
+
+- name: all
+  jobs:
+  - "*"
+
+- name: flask-ubuntu
+  jobs:
+  - flask-ubuntu-*
+  - flask-app-ubuntu-*
+
+- name: flask
+  jobs:
+  - flask-*
+
+# - name: nodejs
+#   jobs:
+#   - nodejs-*
+
+- name: ubuntu
+  jobs:
+  - flask-ubuntu-*
+  - flask-app-ubuntu-*
+  - python-ubuntu-*
+
+- name: rhel-ubi8
+  jobs:
+  - flask-redhat-ubi8*
+  - flask-app-redhat-ubi8*
+
+- name: suse
+  jobs:
+  - flask-suse-*
+  - flask-app-suse-*
+
+- name: debian
+  jobs:
+  - flask-debian*
+  - flask-app-debian*
+
+- name: base-images
+  jobs:
+  - flask-debian-*
+  - flask-ubuntu-*
+  - flask-redhat-ubi8*
+  - flask-suse-*
+  - python-*
+
+
+
+resources:
+# The repo with our Dockerfileflask
+- name: python-flask-app
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/demo-flask-app
+    branch: main
+
+- name: base-images
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/demo-base-images
+    branch: main
+
+# Debian Bullseye based images
+- name: python-flask-base-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: python-flask-time-api-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-time-api-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: reactjs-base-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/reactjs-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: reactjs-time-ui-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/reactjs-time-ui-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+# Ubuntu Jammy based images
+- name: python-base-image-ubuntu-jammy-20211122
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/ubuntu-python-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-jammy-20211122
+
+- name: python-flask-base-image-ubuntu-jammy-20211122
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-ubuntu-jammy-20211122
+
+- name: python-flask-time-api-image-ubuntu-jammy-20211122
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-time-api-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-ubuntu-jammy-20211122
+
+# RedHat UBI8 based images
+- name: python-flask-base-image-redhat-ubi8
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-redhat-ubi8
+
+- name: python-flask-time-api-image-redhat-ubi8
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-time-api-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-redhat-ubi8
+
+# SUSE SLE15 based images
+- name: python-flask-base-image-suse-15.3.17.8.42
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-suse-15.3.17.8.42
+
+- name: python-flask-time-api-image-suse-15.3.17.8.42
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-time-api-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-suse-15.3.17.8.42
+
+jobs:
+# ***
+# Debian Bullseye for Flask
+# ***
+# Build the generic flask REST API base image, with standard dependencies
+#  - This is akin to a buildpack base image, with no running app
+- name: flask-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: [python-ubuntu-jammy-20211122]
+  - task: build-python-flask-image-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/flaskbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: python:3.10.0-bullseye
+      run:
+        path: build
+  - put: python-flask-base-image-debian-bullseye
+    params:
+      image: image/image.tar
+# Now build the thin image for the test app, using the flask base image
+- name: flask-app-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-app
+    trigger: true
+  - get: python-flask-base-image-debian-bullseye
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - flask-debian-bullseye
+  - task: build-python-flask-app-image-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask-app
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask-app
+        DOCKERFILE: python-flask-app/Dockerfiles/flaskonbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/python-flask-base-image:v1-debian-bullseye
+      run:
+        path: build
+  - put: python-flask-time-api-image-debian-bullseye
+    params:
+      image: image/image.tar
+
+# ***
+# Ubuntu for Flask
+# ***
+# Add Python3 to the base ubuntu image first
+- name: python-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+  - task: build-python-image-ubuntu-jammy-20211122
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/pythononubuntu/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ubuntu:jammy-20211122
+      run:
+        path: build
+  - put: python-base-image-ubuntu-jammy-20211122
+    params:
+      image: image/image.tar
+# Build the generic flask REST API base image, with standard dependencies
+#  - This is akin to a buildpack base image, with no running app
+- name: flask-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: false
+  - get: python-base-image-ubuntu-jammy-20211122
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - python-ubuntu-jammy-20211122
+  - task: build-python-flask-image-ubuntu-jammy-20211122
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/flaskbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/ubuntu-python-base-image:v1-jammy-20211122
+      run:
+        path: build
+  - put: python-flask-base-image-ubuntu-jammy-20211122
+    params:
+      image: image/image.tar
+# Now build the thin image for the test app, using the flask base image
+- name: flask-app-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-app
+    trigger: true
+  - get: python-flask-base-image-ubuntu-jammy-20211122
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - flask-ubuntu-jammy-20211122
+  - task: build-python-flask-app-image-ubuntu-jammy-20211122
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask-app
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask-app
+        DOCKERFILE: python-flask-app/Dockerfiles/flaskonbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/python-flask-base-image:v1-ubuntu-jammy-20211122
+      run:
+        path: build
+  - put: python-flask-time-api-image-ubuntu-jammy-20211122
+    params:
+      image: image/image.tar
+
+# ***
+# RHEL UBI8 for Flask
+# ***
+
+# Build the generic flask REST API base image, with standard dependencies
+#  - This is akin to a buildpack base image, with no running app
+- name: flask-redhat-ubi8
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: [python-ubuntu-jammy-20211122]
+  - task: build-python-flask-image-redhat-ubi8
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/flaskbaseyum/Dockerfile
+        BUILD_ARG_BASE_IMAGE: registry.access.redhat.com/ubi8/python-39
+      run:
+        path: build
+  - put: python-flask-base-image-redhat-ubi8
+    params:
+      image: image/image.tar
+# Now build the thin image for the test app, using the flask base image
+- name: flask-app-redhat-ubi8
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-app
+    trigger: true
+  - get: python-flask-base-image-redhat-ubi8
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - flask-redhat-ubi8
+  - task: build-python-flask-app-image-redhat-ubi8
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask-app
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask-app
+        DOCKERFILE: python-flask-app/Dockerfiles/flaskonbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/python-flask-base-image:v1-redhat-ubi8
+      run:
+        path: build
+  - put: python-flask-time-api-image-redhat-ubi8
+    params:
+      image: image/image.tar
+
+
+
+# ***
+# SUSE for Flask
+# ***
+
+# Build the generic flask REST API base image, with standard dependencies
+#  - This is akin to a buildpack base image, with no running app
+- name: flask-suse-15.3.17.8.42
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: [python-ubuntu-jammy-20211122]
+  - task: build-python-flask-image-suse-15.3.17.8.42
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/flaskbasezypper/Dockerfile
+        BUILD_ARG_BASE_IMAGE: registry.suse.com/suse/sle15:15.3.17.8.42
+      run:
+        path: build
+  - put: python-flask-base-image-suse-15.3.17.8.42
+    params:
+      image: image/image.tar
+# Now build the thin image for the test app, using the flask base image
+- name: flask-app-suse-15.3.17.8.42
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-app
+    trigger: true
+  - get: python-flask-base-image-suse-15.3.17.8.42
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - flask-suse-15.3.17.8.42
+  - task: build-python-flask-app-image-suse-15.3.17.8.42
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask-app
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask-app
+        DOCKERFILE: python-flask-app/Dockerfiles/flaskonbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/python-flask-base-image:v1-suse-15.3.17.8.42
+      run:
+        path: build
+  - put: python-flask-time-api-image-suse-15.3.17.8.42
+    params:
+      image: image/image.tar
+
+
+- name: flask-app-deploy-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-time-api-image-ubuntu-jammy-20211122
+    trigger: true
+    params: {skip_download: true}
+  - task: deploy-flask-app-ubuntu-jammy-20211122
+    config:
+      platform: linux
+      inputs:
+      outputs:
+      params:
+      run:
+
+
+
+
+
+# ***
+# Flask app reactjs for Debian
+# ***
+
+# Compile the reactjs app
+# - name: reactjs-debian-bullseye
+#   public: true
+#   serial: true
+#   plan:
+#   - get: python-flask-app
+#     trigger: true
+#   - task: build-reactjs-image-debian-bullseye
+#     config:
+#       platform: linux
+#       image_resource:
+#         type: registry-image
+#         source:
+#           repository: concourse/oci-build-task
+#       inputs:
+#       - name: base-images
+#       outputs:
+#       - name: image
+#       params:
+#         CONTEXT: python-flask-app
+#         DOCKERFILE: python-flask-app/Dockerfiles/reactjsonbase/Dockerfile
+#         BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
+#         # Note: nginx is bullseye on the below tag
+#         BUILD_ARG_RUN_IMAGE: nginx:1.21.4
+#       run:
+#         path: build
+#   - put: reactjs-time-ui-image-debian-bullseye
+#     params:
+#       image: image/image.tar

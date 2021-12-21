@@ -1,0 +1,54 @@
+
+
+# DO NOT USE - SCRATCH PAD FOR FUTURE CHANGES ONLY
+
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/reactjs-base-image:v1-debian-bullseye
+        
+  - get: base-images
+    trigger: true
+    passed: [python-ubuntu-jammy-20211122]
+
+
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/reactjsapt/Dockerfile
+        BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
+      run:
+        path: build
+  - put: reactjs-base-image-debian-bullseye
+    params:
+      image: image/image.tar
+
+
+# Create a static file (nginx) container image for the reactjs app
+- name: flask-reactjs-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-app
+    trigger: true
+  - get: reactjs-base-image-debian-bullseye
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - reactjs-debian-bullseye
+  - task: build-flask-reactjs-image-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: python-flask-app
+      outputs:
+      - name: image
+      params:
+        CONTEXT: python-flask-app
+        DOCKERFILE: python-flask-app/Dockerfiles/reactjsonbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ((image-repo-name))/reactjs-base-image:v1-debian-bullseye
+      run:
+        path: build
+  - put: reactjs-time-ui-image-debian-bullseye
+    params:
+      image: image/image.tar
