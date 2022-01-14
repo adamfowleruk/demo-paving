@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: harbor.shared.12factor.xyz/adamf/adsb-live-processor-java
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v1"
 
@@ -91,10 +91,13 @@ serviceBindings:
     secretName: adsbRabbitMqSecretLiveRead
     passwordKey: password
     usernameKey: username
-    host: rabbitmq.local
-    port: 5672
+    hostKey: host
+    portKey: port
   redis:
     secretName: adsbRedisLiveWrite
     passwordKey: password
     host: redis.local
     port: 6379
+
+spring:
+  profiles: k8s

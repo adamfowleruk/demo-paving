@@ -1,3 +1,9 @@
+# resource_types:
+# - name: ckr
+#   type: docker-image
+#   source: 
+#     repository: jmkarthik/concourse-kubectl-resource
+#     tag: 1.0.0
 
 resources:
 # The repo with out app
@@ -16,6 +22,14 @@ resources:
   source:
     uri: https://github.com/adamfowleruk/demo-base-images
     branch: main
+
+# Paving repo (has raw k8s config files for testing/demos)
+# - name: demo-paving
+#   type: git
+#   icon: github
+#   source:
+#     uri: https://github.com/adamfowleruk/demo-paving
+#     branch: feature-5
 
 # The Container registry with our utility images
 # - Built by the deliver-integration/pipeline.yaml pipeline
@@ -50,6 +64,24 @@ resources:
     password: ((registry-password))
     tag: v1
 
+- name: aircraftui-reactjs
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/aircraftui-reactjs
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+# Now describe the kubernetes target environment
+# - name: adsb-k8s
+#   type: ckr
+#   source:
+#     api_server_uri: {{k8sserver}}
+#     namespace: adsb
+#     certificate_authority_data: {{cica}}
+#     token: {{citoken}}
+
 jobs:
 # Now build the thin image for the test app
 # - using the java builder and runner base images
@@ -79,6 +111,8 @@ jobs:
         DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/adsb-live-processor-java
         BUILD_ARG_APP_JAR_FILENAME: target/adsb-live-processor-0.0.1-SNAPSHOT.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: io.pivotal.pa.rabbitmq.adsbliveprocessor.ADSBLiveProcessorApplication
       run:
         path: build
   - put: adsb-live-processor-java
@@ -111,6 +145,8 @@ jobs:
         DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/adsb-history-processor-java
         BUILD_ARG_APP_JAR_FILENAME: target/adsb-history-processor-0.0.1-SNAPSHOT.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: io.pivotal.pa.rabbitmq.adsbhistoryprocessor.ADSBHistoryProcessorApplication
       run:
         path: build
   - put: adsb-history-processor-java
@@ -144,6 +180,8 @@ jobs:
         DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/aircraft-monitor-java
         BUILD_ARG_APP_JAR_FILENAME: target/aircraft-monitor-0.0.1-SNAPSHOT.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: io.pivotal.pa.web.aircraftmonitor.AircraftMonitorApplication
       run:
         path: build
   - put: aircraft-monitor-java
@@ -154,3 +192,78 @@ jobs:
 # BUILD_ARG_RUNNER_BASE_IMAGE: ((image-repo-name))/java-spring-runner-base-image:v1-debian-bullseye
         # BUILD_ARG_RUN_SPRING_PROFILE: k8s
         # BUILD_ARG_RUN_PORT: 5000
+
+
+# Compile the reactjs builder image
+# - name: build-reactjs-debian-bullseye-image
+#   public: true
+#   serial: true
+#   plan:
+#   - get: python-flask-app
+#     trigger: true
+#   - task: build-reactjs-image-debian-bullseye
+#     privileged: true
+#     config:
+#       platform: linux
+#       image_resource:
+#         type: registry-image
+#         source:
+#           repository: concourse/oci-build-task
+#       inputs:
+#       - name: base-images
+#       outputs:
+#       - name: image
+#       params:
+#         CONTEXT: python-flask-app
+#         DOCKERFILE: python-flask-app/Dockerfiles/reactjsonbase/Dockerfile
+#         BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
+#         # Note: nginx is bullseye on the below tag
+#         BUILD_ARG_RUN_IMAGE: nginx:1.21.4
+#       run:
+#         path: build
+#   - put: reactjs-time-ui-image-debian-bullseye
+#     params:
+#       image: image/image.tar
+
+# Compile the reactjs app
+- name: build-aircraftui-image
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+  - get: base-images
+    trigger: true
+  - task: build-aircraftui-reactjs-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: adsb-app
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/reactjs/Dockerfile
+        BUILD_ARG_BASE_IMAGE: node:17.3.0-bullseye
+        BUILD_ARG_RUN_IMAGE: nginx:1.21.4
+        BUILD_ARG_APP_FOLDER: adsb-app/aircraftui
+      run:
+        path: build
+  - put: aircraftui-reactjs
+    params:
+      image: image/image.tar
+
+
+# Deploy a container image to k8s
+# - name: deploy-adsb-live-processor
+#   plan:
+#   - get: demo-paving
+#   - put: adsb-k8s
+#     params:
+#       file: "k8s/production/adsb-fullstack/deploy-adsb-live.yaml"

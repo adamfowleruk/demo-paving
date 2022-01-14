@@ -47,40 +47,52 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          env:
-          - name: PORT
-            value: "4000"
-          - name: SPRING_PROFILE
-            value: "k8s"
-          - name: RABBITMQ_URL
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.serviceBindings.rabbitmq.secretName }}
-                key: rabbitmq-url
-          # - name: RABBITMQ_PORT
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
-          #       key: rabbitmq-port
-          # - name: RABBITMQ_USERNAME
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
-          #       key: rabbitmq-username
-          # - name: RABBITMQ_PASSWORD
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: {{ .Values.serviceBindings.rabbitmq.secretName }}
-          #       key: rabbitmq-password
+        env:
+        - name: PORT
+          value: "4000"
+        - name: SPRING_PROFILE
+          value: {{ .Values.spring.profiles }}
+        - name: REDIS_HOST
+          value: {{ .Values.serviceBindings.redis.host }}
+        - name: REDIS_PORT
+          value: {{ .Values.serviceBindings.redis.port }}
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.serviceBindings.redis.secretName }}
+              key: {{ .Values.serviceBindings.redis.passwordKey }}
+        - name: RABBITMQ_HOST
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+              key: {{ .Values.serviceBindings.rabbitmq.hostKey }}
+        - name: RABBITMQ_PORT
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+              key: {{ .Values.serviceBindings.rabbitmq.portKey }}
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+              key: {{ .Values.serviceBindings.rabbitmq.usernameKey }}
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.serviceBindings.rabbitmq.secretName }}
+              key: {{ .Values.serviceBindings.rabbitmq.passwordKey }}
+        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
+        - containerPort: 4000
+        # Note: Spring healthcheck port (not exposed to internet)
 
-          # Spring uses a temp dir. Read only FS causes spring (tomcat) to fail
-          # See https://github.com/spring-projects/spring-boot/issues/8578
-          # Workaround is empty dir, as per the below (ephemeral temp store)
-          # WARNING ALL CONTAINERS ON THE SAME NODE CAN READ/WRITE THIS FOLDER!
-          # Also note that a pod failure doesn't clear the folder, only a reboot
-          volumeMounts:
-          - name: tomcat-temp-volume
-            mountPath: /tmp
+        # Spring uses a temp dir. Read only FS causes spring (tomcat) to fail
+        # See https://github.com/spring-projects/spring-boot/issues/8578
+        # Workaround is empty dir, as per the below (ephemeral temp store)
+        # WARNING ALL CONTAINERS ON THE SAME NODE CAN READ/WRITE THIS FOLDER!
+        # Also note that a pod failure doesn't clear the folder, only a reboot
+        volumeMounts:
+        - name: tomcat-temp-volume
+          mountPath: /tmp
       volumes:
       - name: tomcat-temp-volume
         emptyDir: {}

@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-adsb
+  namespace: adsb
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adsb-full-access
+  namespace: adsb
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: ["*"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: adsb-ci-user-binding
+  namespace: adsb
+subjects:
+- kind: ServiceAccount
+  name: ci-adsb
+  namespace: adsb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: adsb-full-access
