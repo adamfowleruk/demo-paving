@@ -30,3 +30,5 @@ override.tf.json
 
 # Helm chart cache vendored version downloads
 helm/*/*/charts/*.*
+
+.DS_Store
