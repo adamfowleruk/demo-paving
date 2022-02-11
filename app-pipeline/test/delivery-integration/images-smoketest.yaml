@@ -1,0 +1,100 @@
+#
+# Test the newly built images against your own environment(s)
+# Particularly useful to test new or updated k8s installations,
+# updates of dependencies (E.g. Contour/Envoy), secret, or
+# persistent storage settings.
+#
+
+# This pipeline is particularly useful in the following situations:-
+# - Test new upstream dependency releases - OS, app runtimes, libraries
+# - Test network routing between k8s systems on different networks. You 
+#   should definitely do this on pre-production systems to ensure hardcoded
+#   URLs or wrong-env credentials don't sneak into your apps!
+# - When you've locked down your systems more (E.g. envoy egress/mTLS)
+# - When you want to exercise your apps to see minimum memory usage needs
+# - Producing evidence for security accreditors (E.g. test URLs that should not
+#   be accessible too)
+
+resource_types:
+- name: kubectl
+  type: docker-image
+  source: 
+    # Uh oh! External person's plugin. Ensure you trust the source!!!
+    # If you pull in a dodgy resource type you may compromise your data
+    # or introduce remote vulnerabilities or dodgy software to your systems.
+    repository: jmkarthik/concourse-kubectl-resource
+    tag: 1.0.0
+
+resources:
+- name: python-flask-time-api-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/python-flask-time-api-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: test-results-flask-time-api-debian-bullseye
+# TODO add config here for pushing the test results somewhere...
+
+# Now describe the kubernetes target environments...
+# First, the environment our app is deployed to
+- name: app-k8s
+  type: ckr
+  source:
+    api_server_uri: {{smoketest-app-k8sserver}}
+    namespace: test-myapp
+    certificate_authority_data: {{smoketest-app-cica}}
+    token: {{smoketest-app-citoken}}
+# Second, the environment the test client code is deployed to
+# - Ideally, a separate k8s cluster on the client network,
+#   but can be the same environment if required as it uses
+#   a separate namespace. The validity of such a test depends
+#   on how you have your k8s network set up. You can use a
+#   service entry in the myappclient namespace to force
+#   client requests through the load balancer front end IP.
+- name: client-k8s
+  type: ckr
+  source:
+    api_server_uri: {{smoketest-client-k8sserver}}
+    namespace: test-myappclient
+    certificate_authority_data: {{smoketest-client-cica}}
+    token: {{smoketest-client-citoken}}
+
+jobs:
+# ***
+# Test the Time service running on Debian Bullseye for Flask
+# ***
+# Run the time API tests against the Flask (not Java) version
+# via a separate namespace (ideally a separate cluster on the
+# target network for access to the app environment).
+- name: test-time-api-flask-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: python-flask-time-api-image-debian-bullseye
+    trigger: true
+    params: {skip_download: true}
+  - task: deploy-time-api-flask-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task CHOOSE THE RIGHT ONE
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/flaskbase/Dockerfile
+        BUILD_ARG_BASE_IMAGE: python:3.10.0-bullseye
+      run:
+        path: build
+  - task: deploy-time-api-client
+  - task: run-time-api-client-tests
+  - put: test-results-flask-time-api-debian-bullseye
+    params:

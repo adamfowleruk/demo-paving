@@ -1,0 +1,95 @@
+# API service for discovery and port linking
+apiVersion: v1
+kind: Service
+metadata:
+  name: adsb-api-svc
+  labels:
+    app: adsb-api
+    service: adsb-api-svc
+spec:
+  ports:
+  - port: 3000
+    name: http
+  selector:
+    app: adsb-api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adsb-api
+  labels:
+    account: adsbapi
+---
+# API endpoint deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adsb-api-deploy
+  labels:
+    app: adsb-api
+    ver: 0.1.0
+    environment: production
+    release: v1
+    # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: adsb-api
+      ver: 0.1.0
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: adsb-api
+        ver: 0.1.0
+        environment: production
+    #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+    spec:
+      containers:
+      - name: adsb-api-container
+        image: harbor.shared.12factor.xyz/adamf/aircraft-monitor-java:v1
+        imagePullPolicy: Always
+        env:
+        - name: PORT
+          value: "3000"
+        - name: SPRING_PROFILE
+          value: "k8s"
+        - name: REDIS_HOST
+          value: my-adsb-redis-headless
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-adsb-redis
+              key: redis-password
+        - name: POSTGRES_DB
+          value: adsbhistory
+        - name: POSTGRES_HOST
+          value: adsbdb-postgresql
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_USERNAME
+          value: postgresql
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: adsbdb-postgresql
+              key: postgresql-password
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
+        - containerPort: 3000
+        # Note: Spring healthcheck port (not exposed to internet)
+---

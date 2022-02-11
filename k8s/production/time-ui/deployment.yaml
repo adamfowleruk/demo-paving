@@ -1,0 +1,72 @@
+# API service for discovery and port linking
+apiVersion: v1
+kind: Service
+metadata:
+  name: time-ui-svc
+  labels:
+    app: time-ui
+    service: time-ui-svc
+spec:
+  ports:
+  - port: 80
+    name: http
+  selector:
+    app: time-ui
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: time-ui
+  labels:
+    account: timeuiuser
+---
+# API endpoint deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: time-ui-deploy
+  labels:
+    app: time-ui
+    ver: 0.1.0
+    environment: production
+    release: time-ui-stable
+    # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: time-ui
+      ver: 0.1.0
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: time-ui
+        ver: 0.1.0
+        environment: production
+    #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
+    spec:
+      containers:
+      - name: time-ui-container
+        image: harbor.shared.12factor.xyz/adamf/reactjs-time-ui-image:v1-debian-bullseye 
+        imagePullPolicy: Always
+        env:
+        - name: REST_API_URL
+          value: https://time.shared.12factor.xyz/time
+        - name: PORT
+          value: "80"
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "500m"
+        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
+        - containerPort: 80
+---

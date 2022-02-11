@@ -108,7 +108,7 @@ jobs:
       - name: image
       params:
         CONTEXT: .
-        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        DOCKERFILE: base-images/buildpacks/springbootmavenfull/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/adsb-live-processor-java
         BUILD_ARG_APP_JAR_FILENAME: target/adsb-live-processor-0.0.1-SNAPSHOT.jar
         BUILD_ARG_MAVEN_VERSION: 3.5.4
@@ -142,7 +142,7 @@ jobs:
       - name: image
       params:
         CONTEXT: .
-        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        DOCKERFILE: base-images/buildpacks/springbootmavenfull/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/adsb-history-processor-java
         BUILD_ARG_APP_JAR_FILENAME: target/adsb-history-processor-0.0.1-SNAPSHOT.jar
         BUILD_ARG_MAVEN_VERSION: 3.5.4
@@ -177,7 +177,7 @@ jobs:
       - name: image
       params:
         CONTEXT: .
-        DOCKERFILE: base-images/buildpacks/springbootmaven/Dockerfile
+        DOCKERFILE: base-images/buildpacks/springbootmavenfull/Dockerfile
         BUILD_ARG_APP_FOLDER: adsb-app/aircraft-monitor-java
         BUILD_ARG_APP_JAR_FILENAME: target/aircraft-monitor-0.0.1-SNAPSHOT.jar
         BUILD_ARG_MAVEN_VERSION: 3.5.4
@@ -253,6 +253,7 @@ jobs:
         BUILD_ARG_BASE_IMAGE: node:17.3.0-bullseye
         BUILD_ARG_RUN_IMAGE: nginx:1.21.4
         BUILD_ARG_APP_FOLDER: adsb-app/aircraftui
+        BUILD_ARG_NGINX_CONF: base-images/buildpacks/reactjs/nginx.conf
       run:
         path: build
   - put: aircraftui-reactjs

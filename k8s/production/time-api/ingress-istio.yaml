@@ -18,3 +18,14 @@ spec:
         port:
           number: 5000
         host: time-api-svc.time.svc.cluster.local
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"

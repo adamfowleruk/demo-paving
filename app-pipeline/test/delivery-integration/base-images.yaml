@@ -1,3 +1,9 @@
+#
+# The core image building pipeline
+# You don't need to run this yourselves - you can use my images from
+# harbor.shared.12factor.xyz/adamf/<IMAGENAME>:<TAG> via https
+#
+
 
 groups:
 
@@ -58,6 +64,13 @@ resources:
     uri: https://github.com/adamfowleruk/demo-flask-app
     branch: main
 
+- name: reactjs-time-ui
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/demo-reactjs-time-ui
+    branch: main
+
 - name: base-images
   type: git
   icon: github
@@ -86,14 +99,14 @@ resources:
     tag: v1-debian-bullseye
 
 ## ReactJS
-- name: reactjs-base-image-debian-bullseye
-  type: registry-image
-  icon: docker
-  source:
-    repository: ((image-repo-name))/reactjs-base-image
-    username: ((registry-username))
-    password: ((registry-password))
-    tag: v1-debian-bullseye
+# - name: reactjs-base-image-debian-bullseye
+#   type: registry-image
+#   icon: docker
+#   source:
+#     repository: ((image-repo-name))/reactjs-base-image
+#     username: ((registry-username))
+#     password: ((registry-password))
+#     tag: v1-debian-bullseye
 
 - name: reactjs-time-ui-image-debian-bullseye
   type: registry-image
@@ -104,24 +117,14 @@ resources:
     password: ((registry-password))
     tag: v1-debian-bullseye
 
-## Java Spring
-- name: java-spring-builder-base-image-debian-bullseye
-  type: registry-image
-  icon: docker
-  source:
-    repository: ((image-repo-name))/java-spring-builder-base-image
-    username: ((registry-username))
-    password: ((registry-password))
-    tag: v1-debian-bullseye
-
-- name: java-spring-runner-base-image-debian-bullseye
-  type: registry-image
-  icon: docker
-  source:
-    repository: ((image-repo-name))/java-spring-runner-base-image
-    username: ((registry-username))
-    password: ((registry-password))
-    tag: v1-debian-bullseye
+# - name: java-spring-base-image-debian-bullseye
+#   type: registry-image
+#   icon: docker
+#   source:
+#     repository: ((image-repo-name))/java-spring-base-image
+#     username: ((registry-username))
+#     password: ((registry-password))
+#     tag: v1-debian-bullseye
 
 # Ubuntu Jammy based images
 - name: python-base-image-ubuntu-jammy-20211122
@@ -495,37 +498,61 @@ jobs:
       image: image/image.tar
 
 
-- name: flask-app-deploy-ubuntu-jammy-20211122
-  public: true
-  serial: true
-  plan:
-  - get: python-flask-time-api-image-ubuntu-jammy-20211122
-    trigger: true
-    params: {skip_download: true}
-  - task: deploy-flask-app-ubuntu-jammy-20211122
-    config:
-      platform: linux
-      inputs:
-      outputs:
-      params:
-      run:
-
-
-
-
 
 # ***
 # Flask app reactjs for Debian
 # ***
 
 # Compile the reactjs app
-# - name: reactjs-debian-bullseye
+- name: reactjs-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+  - get: reactjs-time-ui
+    trigger: true
+  - task: build-reactjs-image-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      - name: reactjs-time-ui
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/reactjs/Dockerfile
+        BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
+        # Note: nginx is bullseye on the below tag
+        BUILD_ARG_RUN_IMAGE: nginx:1.21.4
+        BUILD_ARG_APP_FOLDER: reactjs-time-ui
+        BUILD_ARG_NGINX_CONF: base-images/buildpacks/reactjs/nginx.conf
+      run:
+        path: build
+  - put: reactjs-time-ui-image-debian-bullseye
+    params:
+      image: image/image.tar
+
+
+
+
+
+# Java Spring builder and runtime images
+
+# - name: java-spring-debian-bullseye
 #   public: true
 #   serial: true
 #   plan:
-#   - get: python-flask-app
+#   - get: base-images
 #     trigger: true
-#   - task: build-reactjs-image-debian-bullseye
+#   - task: build-java-spring-debian-bullseye
+#     privileged: true
 #     config:
 #       platform: linux
 #       image_resource:
@@ -537,19 +564,12 @@ jobs:
 #       outputs:
 #       - name: image
 #       params:
-#         CONTEXT: python-flask-app
-#         DOCKERFILE: python-flask-app/Dockerfiles/reactjsonbase/Dockerfile
-#         BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
-#         # Note: nginx is bullseye on the below tag
-#         BUILD_ARG_RUN_IMAGE: nginx:1.21.4
+#         CONTEXT: .
+#         DOCKERFILE: base-images/Dockerfiles/springbasemavenapt/Dockerfile
+#         BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
+#         BUILD_ARG_MAVEN_VERSION: 3.5.4
 #       run:
 #         path: build
-#   - put: reactjs-time-ui-image-debian-bullseye
+#   - put: java-spring-base-image-debian-bullseye
 #     params:
 #       image: image/image.tar
-
-
-
-
-
-# Java Spring builder and runtime images

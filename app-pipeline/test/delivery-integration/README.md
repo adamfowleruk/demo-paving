@@ -48,11 +48,15 @@ I have made the following base tech choices for this example using opensource co
 
 If support is required from a commercial org, below are the products that can be used from VMware on this:-
 
+- All of the below: Tanzu Application Platform (TAP) v1.0.0 provides a supported platform
+incorporating all of the below software, and runs on ANY Kubernetes environment including
+Tanzu Kubernetes Grid, AWS EKS, Azure AKS, Google GKE, and RedHat Openshift.
+
 - Automation: Concourse CI is supported by VMware. Could also use Tekton within Tanzu App Platform if required. Tanzu Build Service can be used to take common app patterns and generate container images too.
 - Automation Runtime Environment: VMware Tanzu Kubernetes Grid (Supports multi cloud)
 - Base images: VMware provides both PhotonOS (as used within VMware ESXi) and Ubuntu base images. Others are supported
 - App frameworks: VMware provides support for the java runtime, tomcat, and spring boot. Tanzu Build Service supports a myriad of other target app platforms too.
-- Container registry, scanning, signing: VMware supports Harbor as part of the Tanzu Kubernetes Grid license
+- Container registry, scanning, signing: VMware supports Harbor as part of the Tanzu Kubernetes Grid license (Which I use in my environment)
 - Target app test environment: Tanzu Kubernetes Grid. Could also have a more PaaS like experience with Tanzu App Platform on top of this or anyones K8S runtime
 - Automated pen tests: Sonobuoy is a VMware project, supported as part of Tanzu Essentials for Kubernetes (or as part of Standard/Advanced licenses) or third party scanners are available
 
@@ -101,9 +105,15 @@ Now login to fly and run the pipeline:-
 ```sh
 fly --target shared login --team-name main --concourse-url https://concourse.shared.12factor.xyz
 fly -t shared sync
-fly -t shared set-pipeline -p app-pipeline \
-  -c ./concourse-pipeline.yaml \
+cd app-pipeline/test/delivery-integration
+fly -t shared set-pipeline -p images-smoketest \
+  -c ./images-smoketest.yaml \
   --var image-repo-name=harbor.shared.12factor.xyz/HARBORPROJECTNAME \
   --var registry-username=CIUSER \
   --var registry-password=CIPASSWORD
 ```
+
+You may wish to run the last fly command for base-images.yaml and adsb-images.yaml
+too if you wish. Note that you are free to use my copy of the built images
+running on harbor.shared.12factor.xyz/adamf if you like too. (Until the AWS bill gets too 
+high for me!!!)
