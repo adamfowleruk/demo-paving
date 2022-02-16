@@ -61,7 +61,7 @@ spec:
         - name: SPRING_PROFILE
           value: "k8s"
         - name: REDIS_HOST
-          value: my-adsb-redis-headless
+          value: my-adsb-redis-master
         - name: REDIS_PORT
           value: "6379"
         - name: REDIS_PASSWORD

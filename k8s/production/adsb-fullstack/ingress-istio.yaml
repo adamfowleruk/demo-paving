@@ -50,7 +50,6 @@ spec:
         - pragma
       maxAge: "24h"
 ---
-
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
@@ -61,12 +60,26 @@ spec:
     - "adsbmq.shared.12factor.xyz"
   gateways:
   - issuer-gateway
-  tls:
+  tcp:
   - match:
-    - sniHosts:
-      - "adsbmq.shared.12factor.xyz"
+    - port: 5672
     route:
     - destination:
         port:
           number: 5672
-        host: adsb-api-svc.adsb.svc.cluster.local
+        host: my-adsb-rabbitmq.adsb.svc.cluster.local
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: tcp-rabbitmq-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-adsb-rabbitmq
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+       ports: ["5672"]
