@@ -2,31 +2,31 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: adsb-api-svc
+  name: adsb-history-processor-svc
   labels:
-    app: adsb-api
-    service: adsb-api-svc
+    app: adsb-history-processor
+    service: adsb-history-processor-svc
 spec:
   ports:
   - port: 3000
     name: http
   selector:
-    app: adsb-api
+    app: adsb-history-processor
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: adsb-api
+  name: adsb-history-processor
   labels:
-    account: adsbapi
+    account: adsbhistoryprocessor
 ---
 # API endpoint deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: adsb-api-deploy
+  name: adsb-history-processor-deploy
   labels:
-    app: adsb-api
+    app: adsb-history-processor
     ver: 0.1.0
     environment: production
     release: v1
@@ -39,36 +39,27 @@ spec:
       maxSurge: 2
   selector:
     matchLabels:
-      app: adsb-api
+      app: adsb-history-processor
       ver: 0.1.0
     matchExpressions:
       - {key: environment, operator: In, values: [production]}
   template:
     metadata:
       labels:
-        app: adsb-api
+        app: adsb-history-processor
         ver: 0.1.0
         environment: production
     #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
     spec:
       containers:
-      - name: adsb-api-container
-        image: harbor.shared.12factor.xyz/adamf/aircraft-monitor-java:v1
+      - name: adsb-history-processor-container
+        image: harbor.shared.12factor.xyz/adamf/adsb-history-processor-java:v1
         imagePullPolicy: Always
         env:
         - name: PORT
           value: "3000"
         - name: SPRING_PROFILE
           value: "k8s"
-        - name: REDIS_HOST
-          value: my-adsb-redis-headless
-        - name: REDIS_PORT
-          value: "6379"
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: my-adsb-redis
-              key: redis-password
         - name: POSTGRES_DB
           value: postgres
         - name: POSTGRES_HOST
@@ -82,10 +73,30 @@ spec:
             secretKeyRef:
               name: adsbdb-postgresql
               key: postgresql-password
+        - name: RABBITMQ_HOST
+          valueFrom:
+            secretKeyRef:
+              name: my-adsb-rabbitmq-default-user
+              key: host
+        - name: RABBITMQ_PORT
+          valueFrom:
+            secretKeyRef:
+              name: my-adsb-rabbitmq-default-user
+              key: port
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: my-adsb-rabbitmq-default-user
+              key: username
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: my-adsb-rabbitmq-default-user
+              key: password
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "100m"
+            memory: "256Mi"
+            cpu: "250m"
           limits:
             memory: "512Mi"
             cpu: "500m"
