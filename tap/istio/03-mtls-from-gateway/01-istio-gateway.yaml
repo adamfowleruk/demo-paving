@@ -1,0 +1,62 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-http01-issuer
+  namespace: cert-manager
+spec:
+  acme:
+    privateKeySecretRef:
+      name: letsencrypt
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+    - http01:
+       ingress:
+         class: istio
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ingress-cert
+  namespace: istio-ingress
+spec:
+  secretName: ingress-cert
+  commonName: tap10istio.12factor.xyz
+  dnsNames:
+  - tap10istio.12factor.xyz
+  - tap-gui.tap10istio.12factor.xyz
+  issuerRef:
+    name: letsencrypt-http01-issuer
+    kind: ClusterIssuer
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: istio-gateway
+  namespace: istio-ingress
+spec:
+  selector:
+    istio: ingress # use the one I created earlier
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "tap-gui.tap10istio.12factor.xyz"
+    - "*.cnr.tap10istio.12factor.xyz"
+    - "learningcenter.tap10istio.12factor.xyz"
+    - "*.learningcenter.tap10istio.12factor.xyz"
+  # https ingress not yet working - I've not got the correct CERT configuration (DNS required)
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls: # Use ISTIO_MUTUAL not SIMPLE to FORCE mTLS (STRICT forced in PeerAuthentication)
+      mode: SIMPLE
+      credentialName: ingress-cert
+    hosts:
+    - "tap-gui.tap10istio.12factor.xyz"
+    - "*.cnr.tap10istio.12factor.xyz"
+    - "learningcenter.tap10istio.12factor.xyz"
+    - "*.learningcenter.tap10istio.12factor.xyz"

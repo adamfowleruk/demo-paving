@@ -1,0 +1,277 @@
+# NOTE: After applying this, don't forget to label the tap-gui namespace for istio-injection, and delete the server pod in -n tap-gui to regenerate the pod with the envoy sidecar for mtls
+---
+# Note: Once all of TAP is configured for STRICT, you can just apply this globally in the istio-ingress namespace
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: tap-gui-auth
+  namespace: tap-gui
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: tap-gui-vs
+  namespace: tap-gui
+spec:
+  hosts:
+    - "tap-gui.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 7000
+        host: server.tap-gui.svc.cluster.local
+---
+# The below is NOT needed for INTERNAL mTLS
+# apiVersion: networking.istio.io/v1beta1
+# kind: DestinationRule
+# metadata:
+#   name: tap-gui-mtls
+#   namespace: tap-gui
+# spec:
+#   host: server.tap-gui.svc.cluster.local
+#   trafficPolicy:
+#     tls:
+#       mode: ISTIO_MUTUAL
+# ---
+# TAP-GUI to accelerator-system
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: accel-auth
+  namespace: accelerator-system
+spec:
+  mtls:
+    mode: STRICT
+---
+# Now for the learning center - this is a redirect, otherwise the content security policy is violated in the browser!
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    redirect:
+      uri: /
+      authority: learning-center-guided.learningcenter.tap10istio.12factor.xyz
+      scheme: http
+---
+# Now for the learning center
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-guided-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 8080
+        host: learningcenter-portal.learning-center-guided-ui.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"
+---
+# Now for the learning center instance w02
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-w01-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided-w01-s001.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 10080
+        host: learning-center-guided-w01-s001.learning-center-guided-w01.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"
+---
+# Now for the learning center instance w02
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-w01-s002-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided-w01-s002.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 10080
+        host: learning-center-guided-w01-s002.learning-center-guided-w01.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"
+---
+# Now for the learning center instance w02
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-w01-s003-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided-w01-s003.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 10080
+        host: learning-center-guided-w01-s003.learning-center-guided-w01.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"
+---
+# Now for the learning center instance w02
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-w01-s004-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided-w01-s004.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 10080
+        host: learning-center-guided-w01-s004.learning-center-guided-w01.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"
+---
+# Now for the learning center instance w02
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: learningcenter-w01-s005-vs
+  namespace: learning-center-guided-ui
+spec:
+  hosts:
+    - "learning-center-guided-w01-s005.learningcenter.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 10080
+        host: learning-center-guided-w01-s005.learning-center-guided-w01.svc.cluster.local
+    # Allow CORS from learning center UI
+    corsPolicy:
+      allowOrigins:
+        - exact: "*"
+      allowMethods:
+        - GET
+        - POST
+      allowCredentials: false
+      allowHeaders:
+        - Content-Type
+        - cache-control
+        - pragma
+      maxAge: "24h"

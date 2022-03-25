@@ -12,8 +12,8 @@ resources:
   icon: github
   source:
     uri: https://github.com/adamfowleruk/spring-adsb
-    branch: feature-23
-    #branch: develop
+    #branch: feature-23
+    branch: develop
 
 # The repo with our base image definitions
 - name: base-images
@@ -42,6 +42,15 @@ resources:
   icon: docker
   source:
     repository: ((image-repo-name))/adsb-live-processor-java
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+- name: adsb-live-processor-dotnet
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/adsb-live-processor-dotnet
     username: ((registry-username))
     password: ((registry-password))
     tag: v1
@@ -82,6 +91,18 @@ resources:
 #     certificate_authority_data: {{cica}}
 #     token: {{citoken}}
 
+# The place to push release files to
+- name: gh-prerelease
+  type: github-release
+  icon: package-variant
+  source:
+    owner: adamfowleruk
+    repository: spring-adsb
+    access_token: {{githubtoken}}
+    pre_release: true
+    release: false
+    tag_filter: "v.*"
+
 jobs:
 # Now build the thin image for the test app
 # - using the java builder and runner base images
@@ -91,8 +112,10 @@ jobs:
   plan:
   - get: adsb-app
     trigger: true
+    params: {depth: 1}
   - get: base-images
     trigger: true
+    params: {depth: 1}
   - task: build-live-processor-java-debian-bullseye
     privileged: true
     config:
@@ -119,14 +142,52 @@ jobs:
     params:
       image: image/image.tar
 
+- name: build-live-processor-dotnet-image
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+    params: {depth: 1}
+  - get: base-images
+    trigger: true
+    params: {depth: 1}
+  - task: build-live-processor-dotnet-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: adsb-app
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/buildpacks/aspdotnetruntime/Dockerfile
+        BUILD_ARG_BUILDER_BASE_IMAGE: mcr.microsoft.com/dotnet/sdk:6.0.200-bullseye-slim-amd64
+        BUILD_ARG_RUNNER_BASE_IMAGE: mcr.microsoft.com/dotnet/aspnet:6.0.2-bullseye-slim-amd64
+        BUILD_ARG_APP_FOLDER: adsb-app/adsb-live-processor-dotnet
+        BUILD_ARG_BUILD_TYPE: release
+      run:
+        path: build
+  - put: adsb-live-processor-dotnet
+    params:
+      image: image/image.tar
+
 - name: build-history-processor-java-image
   public: true
   serial: true
   plan:
   - get: adsb-app
     trigger: true
+    params: {depth: 1}
   - get: base-images
     trigger: true
+    params: {depth: 1}
   - task: build-history-processor-java-debian-bullseye
     privileged: true
     config:
@@ -160,8 +221,10 @@ jobs:
   plan:
   - get: adsb-app
     trigger: true
+    params: {depth: 1}
   - get: base-images
     trigger: true
+    params: {depth: 1}
   - task: build-aircraft-monitor-java-debian-bullseye
     privileged: true
     config:
@@ -188,43 +251,6 @@ jobs:
     params:
       image: image/image.tar
 
-# BUILD_ARG_BUILDER_BASE_IMAGE: ((image-repo-name))/java-spring-builder-base-image:v1-debian-bullseye
-# BUILD_ARG_RUNNER_BASE_IMAGE: ((image-repo-name))/java-spring-runner-base-image:v1-debian-bullseye
-        # BUILD_ARG_RUN_SPRING_PROFILE: k8s
-        # BUILD_ARG_RUN_PORT: 5000
-
-
-# Compile the reactjs builder image
-# - name: build-reactjs-debian-bullseye-image
-#   public: true
-#   serial: true
-#   plan:
-#   - get: python-flask-app
-#     trigger: true
-#   - task: build-reactjs-image-debian-bullseye
-#     privileged: true
-#     config:
-#       platform: linux
-#       image_resource:
-#         type: registry-image
-#         source:
-#           repository: concourse/oci-build-task
-#       inputs:
-#       - name: base-images
-#       outputs:
-#       - name: image
-#       params:
-#         CONTEXT: python-flask-app
-#         DOCKERFILE: python-flask-app/Dockerfiles/reactjsonbase/Dockerfile
-#         BUILD_ARG_BASE_IMAGE: node:17.2.0-bullseye
-#         # Note: nginx is bullseye on the below tag
-#         BUILD_ARG_RUN_IMAGE: nginx:1.21.4
-#       run:
-#         path: build
-#   - put: reactjs-time-ui-image-debian-bullseye
-#     params:
-#       image: image/image.tar
-
 # Compile the reactjs app
 - name: build-aircraftui-image
   public: true
@@ -232,8 +258,10 @@ jobs:
   plan:
   - get: adsb-app
     trigger: true
+    params: {depth: 1}
   - get: base-images
     trigger: true
+    params: {depth: 1}
   - task: build-aircraftui-reactjs-debian-bullseye
     privileged: true
     config:
@@ -268,3 +296,62 @@ jobs:
 #   - put: adsb-k8s
 #     params:
 #       file: "k8s/production/adsb-fullstack/deploy-adsb-live.yaml"
+
+
+
+
+# Go Releaser image
+# ---
+# Start by building the thing
+
+- name: build-go-console
+  public: true
+  serial: true
+  plan:
+  - get: adsb-app
+    trigger: true
+    params: {depth: 1}
+  - task: build-go-console
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: goreleaser/goreleaser
+      inputs:
+      - name: adsb-app
+      outputs:
+      - name: dist
+        path: adsb-app/adsb-console-go/dist
+      params:
+        CONTEXT: .
+      run:
+        path: /bin/bash
+        args:
+          - -c
+          - |
+            cd adsb-app/adsb-console-go
+            goreleaser release --snapshot --skip-publish --skip-validate
+            echo `git rev-parse --short HEAD` > dist/name.txt
+            echo v0.0.0-`git rev-parse --short HEAD` > dist/tag.txt
+            echo `git rev-parse HEAD` > dist/commitish.txt
+            echo "Commitish:-"
+            cat dist/commitish.txt
+            echo "Name:-"
+            cat dist/name.txt
+            echo "Tag:-"
+            cat dist/tag.txt
+
+# I'm using Concourse to manage all my releases, rather than using goreleaser
+  - put: gh-prerelease
+    params: 
+      name: dist/name.txt
+      tag: dist/tag.txt
+      commitish: dist/commitish.txt
+      globs:
+      - "dist/*.deb"
+      - "dist/*.rpm"
+      - "dist/*.json"
+      - "dist/*_darwin_*.tar.gz"
+      - "dist/*_checksums.txt"

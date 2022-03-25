@@ -1,0 +1,9 @@
+# Certificate issuance
+
+We now need a cert. Add the instructions...
+
+TODO
+
+CERT ISSUANCE SEEMS TO WORK BUT NO INGRESS ON HTTPS
+
+NOTE CERT ISSUANCE SEEMS TO USE A PATTERN FOR THE CERT AND NOT A FIXED NAME AS REQUESTED - EXTRA CONFIG TO PASS??? (Name pattern?)

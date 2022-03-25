@@ -1,0 +1,23 @@
+---
+# Equivalent of httpproxies.projectcontour.io called tap-gui in ns tap-gui
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: tap-gui-vs
+  namespace: tap-gui
+spec:
+  hosts:
+    - "tap-gui.tap10istio.12factor.xyz"
+  gateways:
+  - istio-ingress/istio-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 7000
+        host: server.tap-gui.svc.cluster.local 
+          # Always use explicit fqdn version
+---

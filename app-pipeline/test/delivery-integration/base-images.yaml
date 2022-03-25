@@ -20,6 +20,14 @@ groups:
   jobs:
   - flask-*
 
+- name: java
+  jobs:
+  - java-*
+
+- name: reactjs
+  jobs:
+  - reactjs-*
+
 # - name: nodejs
 #   jobs:
 #   - nodejs-*
@@ -29,21 +37,27 @@ groups:
   - flask-ubuntu-*
   - flask-app-ubuntu-*
   - python-ubuntu-*
+  - java-ubuntu-*
+  - java-spring-ubuntu-*
 
 - name: rhel-ubi8
   jobs:
   - flask-redhat-ubi8*
   - flask-app-redhat-ubi8*
+  - java-spring-redhat-ubi8*
 
 - name: suse
   jobs:
   - flask-suse-*
   - flask-app-suse-*
+  - java-spring-suse-*
 
 - name: debian
   jobs:
   - flask-debian*
   - flask-app-debian*
+  - java-spring-debian-*
+  - reactjs-debian-*
 
 - name: base-images
   jobs:
@@ -52,6 +66,11 @@ groups:
   - flask-redhat-ubi8*
   - flask-suse-*
   - python-*
+  - java-*
+  - java-spring-debian-*
+  - java-spring-ubuntu-*
+  - java-spring-redhat-ubi8*
+  - java-spring-suse-*
 
 
 
@@ -116,6 +135,51 @@ resources:
     username: ((registry-username))
     password: ((registry-password))
     tag: v1-debian-bullseye
+
+- name: java-base-image-ubuntu-jammy-20211122
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/ubuntu-java-base-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-jammy-20211122
+
+- name: java-dummy-image-ubuntu-jammy-20211122
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-dummy-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-ubuntu-jammy-20211122
+
+- name: java-dummy-image-debian-bullseye
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-dummy-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-debian-bullseye
+
+- name: java-dummy-image-suse-15.3.17.8.42
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-dummy-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-suse-15.3.17.8.42
+
+- name: java-dummy-image-redhat-ubi8
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/java-dummy-image
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1-redhat-ubi8
 
 # - name: java-spring-base-image-debian-bullseye
 #   type: registry-image
@@ -510,6 +574,7 @@ jobs:
   plan:
   - get: base-images
     trigger: true
+    passed: [python-ubuntu-jammy-20211122]
   - get: reactjs-time-ui
     trigger: true
   - task: build-reactjs-image-debian-bullseye
@@ -545,31 +610,175 @@ jobs:
 
 # Java Spring builder and runtime images
 
-# - name: java-spring-debian-bullseye
-#   public: true
-#   serial: true
-#   plan:
-#   - get: base-images
-#     trigger: true
-#   - task: build-java-spring-debian-bullseye
-#     privileged: true
-#     config:
-#       platform: linux
-#       image_resource:
-#         type: registry-image
-#         source:
-#           repository: concourse/oci-build-task
-#       inputs:
-#       - name: base-images
-#       outputs:
-#       - name: image
-#       params:
-#         CONTEXT: .
-#         DOCKERFILE: base-images/Dockerfiles/springbasemavenapt/Dockerfile
-#         BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
-#         BUILD_ARG_MAVEN_VERSION: 3.5.4
-#       run:
-#         path: build
-#   - put: java-spring-base-image-debian-bullseye
-#     params:
-#       image: image/image.tar
+- name: java-spring-debian-bullseye
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: [java-ubuntu-jammy-20211122]
+  - task: build-java-spring-debian-bullseye
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/Dockerfiles/springbasemavenapt/Dockerfile
+        BUILD_ARG_BUILDER_BASE_IMAGE: openjdk:11.0.13-jdk-slim-bullseye
+        BUILD_ARG_RUNNER_BASE_IMAGE: openjdk:11.0.13-jdk-slim-bullseye
+        BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
+        BUILD_ARG_APP_JAR_FILENAME: target/microservice.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: com.vmware.dummy.DummyApp
+      run:
+        path: build
+  - put: java-dummy-image-debian-bullseye
+    params:
+      image: image/image.tar
+
+
+- name: java-spring-suse-15.3.17.8.42
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: [java-ubuntu-jammy-20211122]
+  - task: build-java-spring-suse-15.3.17.8.42
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/Dockerfiles/springbasemavenzypper/Dockerfile
+        BUILD_ARG_BUILDER_BASE_IMAGE: registry.suse.com/suse/sle15:15.3.17.8.42
+        BUILD_ARG_RUNNER_BASE_IMAGE: registry.suse.com/suse/sle15:15.3.17.8.42
+        BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
+        BUILD_ARG_APP_JAR_FILENAME: target/microservice.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: com.vmware.dummy.DummyApp
+      run:
+        path: build
+  - put: java-dummy-image-suse-15.3.17.8.42
+    params:
+      image: image/image.tar
+
+# Add Java to the base ubuntu image first
+- name: java-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+  - task: build-java-image-ubuntu-jammy-20211122
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/javaonubuntu/Dockerfile
+        BUILD_ARG_BASE_IMAGE: ubuntu:jammy-20211122
+        BUILD_ARG_OPENJDK_PACKAGE: openjdk-11-jdk-headless
+        BUILD_ARG_JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      run:
+        path: build
+  - put: java-base-image-ubuntu-jammy-20211122
+    params:
+      image: image/image.tar
+
+- name: java-spring-ubuntu-jammy-20211122
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: false
+  - get: java-base-image-ubuntu-jammy-20211122
+    trigger: true
+    params: {skip_download: true}
+    passed: 
+      - java-ubuntu-jammy-20211122
+  - task: build-java-spring-ubuntu-jammy-20211122
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/Dockerfiles/springbasemavenapt/Dockerfile
+        BUILD_ARG_BUILDER_BASE_IMAGE: ((image-repo-name))/ubuntu-java-base-image:v1-jammy-20211122
+        BUILD_ARG_RUNNER_BASE_IMAGE: ((image-repo-name))/ubuntu-java-base-image:v1-jammy-20211122
+        BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
+        BUILD_ARG_APP_JAR_FILENAME: target/microservice.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: com.vmware.dummy.DummyApp
+      run:
+        path: build
+  - put: java-dummy-image-ubuntu-jammy-20211122
+    params:
+      image: image/image.tar
+
+- name: java-spring-redhat-ubi8
+  public: true
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+    passed: 
+      - java-ubuntu-jammy-20211122
+  - task: build-java-spring-redhat-ubi8
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: .
+        DOCKERFILE: base-images/Dockerfiles/springbasemavenyum/Dockerfile
+        BUILD_ARG_BUILDER_BASE_IMAGE: registry.access.redhat.com/ubi8/openjdk-11
+        BUILD_ARG_RUNNER_BASE_IMAGE: registry.access.redhat.com/ubi8/openjdk-11
+        BUILD_ARG_APP_FOLDER: base-images/stacks/java-spring/all-2.1.13/maven
+        BUILD_ARG_APP_JAR_FILENAME: target/microservice.jar
+        BUILD_ARG_MAVEN_VERSION: 3.5.4
+        BUILD_ARG_RUN_MAIN_CLASS: com.vmware.dummy.DummyApp
+      run:
+        path: build
+  - put: java-dummy-image-redhat-ubi8
+    params:
+      image: image/image.tar

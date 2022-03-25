@@ -1,0 +1,92 @@
+# This file defines ServiceEntry objects for Istio for common
+# TAP external services. This is NOT required for egress to work
+# (Unless you changed egress from ALLOW_ANY to REGISTRY), but
+# Does provide a nice visualisation in the Kiali dashboard.
+
+# TODO add these into a dedicated istio-egress namespace
+# with its own istio-egress service.
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: tap-harbor
+spec:
+  hosts:
+  # Change this to whatever your Harbor registry for TAP is
+  - harbor.shared.12factor.xyz
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: tanzu-registry
+spec:
+  hosts:
+  - registry.tanzu.vmware.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: tanzu-network
+spec:
+  hosts:
+  - network.tanzu.vmware.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: github
+spec:
+  hosts:
+  - github.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: gcr
+spec:
+  hosts:
+  - gcr.io
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: dockerhub
+spec:
+  hosts:
+  - docker.io
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+  location: MESH_EXTERNAL
