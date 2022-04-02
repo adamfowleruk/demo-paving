@@ -96,6 +96,14 @@ resources:
   source:
     uri: https://github.com/adamfowleruk/demo-base-images
     branch: main
+    paths:
+      - Dockerfiles/flask*/*
+      - Dockerfiles/java*/*
+      - Dockerfiles/python*/*
+      - Dockerfiles/react*/*
+      - Dockerfiles/spring*/*
+      - stacks/**/*
+      - buildpacks/**/*
 
 # Debian Bullseye based images
 ## Python Flask

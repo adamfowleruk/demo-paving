@@ -1,0 +1,68 @@
+
+# resource_types:
+# - name: kubectl
+#   type: docker-image
+#   source: 
+#     # Uh oh! External person's plugin. Ensure you trust the source!!!
+#     # If you pull in a dodgy resource type you may compromise your data
+#     # or introduce remote vulnerabilities or dodgy software to your systems.
+#     repository: jmkarthik/concourse-kubectl-resource
+#     tag: 1.0.0
+
+resources:
+- name: base-images
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/adamfowleruk/demo-base-images
+    branch: main
+    paths:
+      - Dockerfiles/kappbootstrap/*
+      - Dockerfiles/kappbootstrap/**/*
+
+- name: myorg-kapp-bootstrap-image
+  type: registry-image
+  icon: docker
+  source:
+    repository: ((image-repo-name))/myorg-kapp-bootstrap
+    username: ((registry-username))
+    password: ((registry-password))
+    tag: v1
+
+jobs:
+# ***
+# Build MyOrg's kapp bootstrap image using myorg creds
+# ***
+# Builds a re-usable image used to bootstrap Tanzu kapp
+# controller into a cluster. Only performs the build
+# doesn't use the container image.
+- name: build-kapp-bootstrap
+  public: false
+  serial: true
+  plan:
+  - get: base-images
+    trigger: true
+  - task: build-kapp-bootstrap
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: concourse/oci-build-task
+      inputs:
+      - name: base-images
+      outputs:
+      - name: image
+      params:
+        CONTEXT: base-images
+        DOCKERFILE: base-images/Dockerfiles/kappbootstrap/Dockerfile
+        BUILD_ARG_TANZUNET_USERNAME: ((tanzunet-username))
+        BUILD_ARG_TANZUNET_PASSWORD: ((tanzunet-password))
+        BUILD_ARG_PIVNET_TOKEN: ((pivnet-token))
+        # Defaults for all other args
+      run:
+        path: build
+  - put: myorg-kapp-bootstrap-image
+    params:
+      image: image/image.tar

@@ -22,6 +22,8 @@ resources:
   source:
     uri: https://github.com/adamfowleruk/demo-base-images
     branch: main
+    paths:
+      - buildpacks/**/*
 
 # Paving repo (has raw k8s config files for testing/demos)
 # - name: demo-paving
