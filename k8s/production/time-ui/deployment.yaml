@@ -10,6 +10,7 @@ spec:
   ports:
   - port: 80
     name: http
+    targetPort: 3000
   selector:
     app: time-ui
 ---
@@ -30,7 +31,6 @@ metadata:
     ver: 0.1.0
     environment: production
     release: time-ui-stable
-    # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
 spec:
   strategy:
     type: RollingUpdate
@@ -49,24 +49,18 @@ spec:
         app: time-ui
         ver: 0.1.0
         environment: production
-    #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
     spec:
       containers:
       - name: time-ui-container
-        image: harbor.shared.12factor.xyz/adamf/reactjs-time-ui-image:v1-debian-bullseye 
+        image: harbor.shared.12factor.xyz/natarajmb/demo-reactjs-time-ui:latest  
         imagePullPolicy: Always
         env:
-        - name: REST_API_URL
-          value: https://time.shared.12factor.xyz/time
+        - name: REACT_APP_REST_API_URL
+          value: http://localhost:5000/time
+        - name: REACT_APP_DB_TIME_URL
+          value: http://localhost:5000/dbtime  
         - name: PORT
-          value: "80"
-        resources:
-          requests:
-            memory: "16Mi"
-            cpu: "100m"
-          limits:
-            memory: "64Mi"
-            cpu: "500m"
-        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
-        - containerPort: 80
+          value: "3000"
+        ports:
+        - containerPort: 3000
 ---
