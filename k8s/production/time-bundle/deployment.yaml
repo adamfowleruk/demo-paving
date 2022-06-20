@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: time-bundle-ui
+  labels:
+    app: time-bundle
+    service: time-bundle-ui
+spec:
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3000
+  selector:
+    app: time-bundle
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: time-bundle-svc
+  labels:
+    app: time-bundle
+    service: time-bundle-svc
+spec:
+  ports:
+  - port: 5000
+    name: http
+    targetPort: 5000
+  selector:
+    app: time-bundle
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: time-bundle
+  labels:
+    account: timebundleuser
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  labels:
+    app: time-bundle
+data:
+  POSTGRES_DB: test
+  POSTGRES_USER: test
+  POSTGRES_PASSWORD: test
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: postgres-pv-claim
+  labels:
+    app: time-bundle
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: time-bundle-deploy
+  labels:
+    app: time-bundle
+    ver: 0.1.0
+    environment: production
+    release: time-bundle-stable
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
+      maxSurge: 2
+  selector:
+    matchLabels:
+      app: time-bundle
+      ver: 0.1.0
+    matchExpressions:
+      - {key: environment, operator: In, values: [production]}
+  template:
+    metadata:
+      labels:
+        app: time-bundle
+        ver: 0.1.0
+        environment: production
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      serviceAccountName: time-bundle
+      containers:
+       - name: time-api-container
+         image: harbor.shared.12factor.xyz/natarajmb/demo-flask-app:latest
+         imagePullPolicy: Always
+         env:
+         - name: PGHOST
+           value: localhost
+         - name: PGUSER
+           value: test
+         - name: PGDATABASE
+           value: test
+         - name: PGPASSWORD
+           value: test
+         - name: PORT
+           value: "5000"
+         resources:
+           requests:
+             memory: "64Mi"
+             cpu: "100m"
+           limits:
+             memory: "128Mi"
+             cpu: "500m"
+         ports:
+         - containerPort: 5000
+       - name: time-ui-container
+         image: harbor.shared.12factor.xyz/natarajmb/demo-reactjs-time-ui:latest 
+         imagePullPolicy: Always
+         env:
+         - name: REACT_APP_REST_API_URL
+           value: http://localhost:5000/time
+         - name: REACT_APP_DB_TIME_URL
+           value: http://localhost:5000/dbtime  
+         - name: PORT
+           value: "3000"
+         ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
+         - containerPort: 3000
+       - name: postgres
+         image: harbor.shared.12factor.xyz/bitnami/postgresql:latest
+         imagePullPolicy: Always
+         ports:
+         - containerPort: 5432
+         envFrom:
+         - configMapRef:
+              name: postgres-config
+         volumeMounts:
+         - mountPath: /var/lib/postgresql/data
+           name: postgredb
+      volumes:
+       - name: postgredb
+         persistentVolumeClaim:
+            claimName: postgres-pv-claim
+---

@@ -1,4 +1,3 @@
-# API service for discovery and port linking
 apiVersion: v1
 kind: Service
 metadata:
@@ -20,7 +19,6 @@ metadata:
   labels:
     account: timeuser
 ---
-# API endpoint deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,7 +28,6 @@ metadata:
     ver: 0.1.4
     environment: production
     release: time-api-stable
-    # releasesha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
 spec:
   strategy:
     type: RollingUpdate
@@ -49,22 +46,38 @@ spec:
         app: time-api
         ver: 0.1.4
         environment: production
-    #     sha256: "sha256:2749c56d99c7e9c85b97b5fd756a3de07471c44e27695305594ec52e143da937"
     spec:
       containers:
       - name: time-api-container
-        image: harbor.shared.12factor.xyz/adamf/python-flask-time-api-image:v1-debian-bullseye 
+        image: harbor.shared.12factor.xyz/natarajmb/demo-flask-app:latest 
         imagePullPolicy: Always
         env:
-        - name: DATABASE_HOST
-          value: timedb.shared.12factor.xyz
-        - name: PORT
-          value: "5000"
-        # - name: DATABASE_PASSWORD
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: address-book-db-password
-        #       key: address-book-db-password
+         - name: PGHOST
+           valueFrom:
+             secretKeyRef:
+               name: test-app-user-db-secret
+               key: host
+               optional: false
+         - name: PGUSER
+           valueFrom:
+             secretKeyRef:
+               name: test-app-user-db-secret
+               key: username
+               optional: false
+         - name: PGDATABASE
+           valueFrom:
+             secretKeyRef:
+               name: test-app-user-db-secret
+               key: database
+               optional: false
+         - name: PGPASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: test-app-user-db-secret
+               key: password
+               optional: false
+         - name: PORT
+           value: "5000"
         resources:
           requests:
             memory: "64Mi"
@@ -72,6 +85,6 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
-        ports: # Note this MUST match the port exposed by the container itself (other you'll get an unresponsive endpoint error)
+        ports:
         - containerPort: 5000
 ---
