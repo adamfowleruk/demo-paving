@@ -1,0 +1,25 @@
+
+Sample output from
+`kubectl describes nodes`
+
+Name:               ip-10-0-2-238.us-east-2.compute.internal
+Roles:              <none>
+Labels:             beta.kubernetes.io/arch=amd64
+                    beta.kubernetes.io/instance-type=t2.small
+                    beta.kubernetes.io/os=linux
+                    failure-domain.beta.kubernetes.io/region=us-east-2
+                    failure-domain.beta.kubernetes.io/zone=us-east-2b
+                    kubernetes.io/arch=amd64
+                    kubernetes.io/hostname=ip-10-0-2-238.us-east-2.compute.internal
+                    kubernetes.io/os=linux
+                    node.kubernetes.io/instance-type=t2.small
+                    topology.kubernetes.io/region=us-east-2
+                    topology.kubernetes.io/zone=us-east-2b
+Annotations:        node.alpha.kubernetes.io/ttl: 0
+                    volumes.kubernetes.io/controller-managed-attach-detach: true
+
+
+For HA we can have a single cluster split across AZs, but use 
+anti-affinity rules to ensure even placement.
+
+Need to build this into the demo too, but across platforms.

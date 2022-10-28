@@ -1,0 +1,52 @@
+# Require authentication for this workload
+# See https://istio.io/latest/docs/reference/config/security/request_authentication/
+# Note we could set this globally for the Mesh or Namespace and remove it for individual workloads too (TODO show this as the default as its safer)
+# See also https://www.istiobyexample.dev/jwt
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: address-book-manage-api-auth
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: address-book-manage-api
+  jwtRules: # paste the jwks json from k8s/production/prereqs/gen-jawks-jwt.sh output
+  - issuer: "testing@adamfowler.org"
+    jwks: |
+      {"kty":"RSA","e":"AQAB","kid":"bed48809-71a8-41d5-b8b5-d1434d948beb","n":"6xpDoHEWlW1mGbAxx_QBaYzU6Ye5FdcsYNpP8OnycDgCFxoGboUfUHgj0eXeJB-fNwKUvNqkZGx4ZqxcupuTttbMN3wL6iccf-LxAJnJMGBDNjhxoxGtUShpY5EkrIf_41m1cZpssvAMZmh8c2BPfa6xSmfixR-y_QOthKdfQwtvUMZ_Z9ZcnwQhFQUfZRIYVNbz_Xw4U3mVIHKC529oXiXMfsfQcH-NKNlIK9uhka8NcWgctiwUlgzgIeZtnHzxmPPGohroH5l158mME4QKSxkCD2Jf_dMSlktag8CM4OpFbYmnRGup8CTRE-3stoty25aWRTx78vcPxKbNA6H0AGaIqcgH8JcatXQBCETFLB5c_sy_mKj1CQUYhyJQ85gUOWBz4TqX8VHwqMe3ul9zk4VWgMGVtDiZOLsZyH8c7o_WQpev_f0ugCu-pAlPB9TdMr9uNqd3sAB0vL9Od7NU_B2B4-qbgJNTsGkwKp_2IzxHqbzeFi-yg4uAmkAOGh-Sm2FaXt-6IyFv4yTrEnKdfeKhUXNKK6QxYFENqybX366-VIFl4rdzJq_O-w46Lu4esaRwqmVajHAWP6-kNwEFw1J0w3rP8j5nUv4moiMlzNV2B0MXkpyphRFG1ubIzllxeRl6OXaQ-B5sakN0OXoltDtdGawBmq40X1HByfqdIS0"}
+---
+# Option 1: Allow only to specific URLs (potentially open to developer accidentally exposing an endpoint)
+# See https://www.istiobyexample.dev/jwt
+# apiVersion: security.istio.io/v1beta1
+# kind: AuthorizationPolicy
+# metadata:
+#   name: address-book-manage-api-auth-policy
+#   namespace: default
+# spec:
+#   selector:
+#     matchLabels:
+#       app: address-book-manage-api
+#   action: ALLOW
+#   rules:
+#   - from:
+#     - source:
+#         requestPrincipals: ["testing@adamfowler.org"]
+# #        requestPrincipals: ["*"] # Any authorised user
+---
+# Option 2: Deny all that are not valid JWT tokens, to all URLs
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: address-book-manage-api-auth-policy
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  action: DENY
+  rules:
+  - from:
+    - source:
+        notRequestPrincipals: ["*"]
+---

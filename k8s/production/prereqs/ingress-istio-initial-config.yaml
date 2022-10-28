@@ -1,0 +1,82 @@
+# Define the gateways rather than the single ingress gateway
+# See https://discuss.istio.io/t/how-to-run-multiple-ingress-gateway-with-different-class-names/1866/2
+gateways:
+  enabled: true
+  istio-ingressgateway:
+    serviceAnnotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    sds:
+      enabled: true
+  istio-egressgateway:
+    enabled: false # Disable the default istio ingress
+  address-book-unauthenticated-ingressgateway:
+    namespace: istio-system
+    enabled: true
+    sds:
+      enabled: true
+      image: node-agent-k8s
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 2000m
+          memory: 1024Mi
+    labels:
+      app: address-book
+      istio: address-book-unauthenticated-ingressgateway
+    replicaCount: 1
+    autoscaleMin: 1
+    autoscaleMax: 2
+        type: LoadBalancer
+        ports: # TODO remove HTTP eventually, or always forward to https
+        - port: 80
+          targetPort: 80
+          name: http2
+        - port: 443
+          name: https
+        - port: 31400 # TODO remove TCP eventually
+          name: tcp
+        secretVolumes: # TODO change this to a per gateway setting
+        - name: ingressgateway-certs
+          secretName: istio-ingressgateway-certs
+          mountPath: /etc/istio/ingressgateway-certs
+        - name: ingressgateway-ca-certs
+          secretName: istio-ingressgateway-ca-certs
+          mountPath: /etc/istio/ingressgateway-ca-certs
+    sidecarInjectorWebhook:
+      rewriteAppHTTPProbe: true
+    tracing:
+      enabled: true
+    kiali: # TODO verify these settings are as expected
+      enabled: true
+      prometheusAddr: http://prometheus-prometheus.monitoring:9090
+      dashboard:
+        jaegerURL: "http://localhost:16686"
+        grafanaURL: "http://grafana:3000"
+    prometheus:
+      enabled: false
+    pilot:
+      traceSampling: 100.0
+    global:
+      logging:
+        level: "default:info"
+        autoInject: enabled
+        # Specify which tracer to use. One of: lightstep, zipkin, datadog
+        tracer: "zipkin"
+      # controlPlaneMtls enabled. Will result in delays starting the pods while secrets are
+      # propagated, not recommended for tests.
+      controlPlaneSecurityEnabled: true
+      disablePolicyChecks: true # TODO verify why on earth this is needed!?!
+---
+# Ensure all workloads are protected using mtls
+# See https://istio.io/latest/docs/concepts/security/#peer-authentication
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: "mtls-strict-always-policy"
+  namespace: "default"
+spec:
+  mtls:
+    mode: STRICT

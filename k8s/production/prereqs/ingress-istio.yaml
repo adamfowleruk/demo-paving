@@ -1,15 +1,49 @@
+# # Option 1: Basic HTTP only
+# apiVersion: networking.istio.io/v1alpha3
+# kind: Gateway
+# metadata:
+#   name: address-book-gateway
+# spec:
+#   selector:
+#     istio: ingressgateway # use istio default controller
+#   servers:
+#   - port:
+#       number: 80
+#       name: http
+#       protocol: HTTP
+#     hosts:
+#     - "*"
+---
+# Option 2: Secure TLS termination in Istio
+# See https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/
+# Note: Do this before applying: kubectl create -n istio-system secret tls bigapp-tls-credential --key=bigapp.adamfowler.org.key --cert=bigapp.adamfowler.org.crt
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: address-book-gateway
 spec:
   selector:
-    istio: ingressgateway # use istio default controller
+    istio: ingressgateway # use istio default ingress gateway
   servers:
   - port:
-      number: 80
-      name: http
-      protocol: HTTP
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls: # Use ISTIO_MUTUAL not SIMPLE to FORCE mTLS (STRICT forced in PeerAuthentication)
+      mode: ISTIO_MUTUAL
+      credentialName: bigapp-tls-credential # must be the same as secret
     hosts:
     - "*"
+    # - bigapp.adamfowler.org
+---
+# GLOBALLY force mTLS for Istio only, for all workloads, in all namespaces
+# See https://istio.io/latest/docs/tasks/security/authentication/authn-policy/
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: "default"
+  namespace: "istio-system"
+spec:
+  mtls:
+    mode: STRICT
 ---
